@@ -6,9 +6,9 @@ import pandas as pd
 
 class Macd:
     k_data: pd.DataFrame
-    get_close_func: Callable[[str], pd.Series]
+    get_close_func: Callable[[pd.DataFrame, str], pd.Series]
 
-    def __init__(self, k_data, get_close=lambda df: df['close']):
+    def __init__(self, k_data, get_close=lambda df, key='close': df[key]):
         super().__init__()
         self.k_data = k_data
         self.get_close_func = get_close
@@ -23,7 +23,7 @@ class Macd:
         if rows < x:
             raise ValueError(f"计算过去 {x} 天EA失败，数据仅包含 {rows} 行，不足以计算EA")
         # 假设 k 线数据只有15天，计算MA_10 ,那只能准确计算过去 6 天的 MA 值
-        k_data_close = self.get_close_func(self.k_data)
+        k_data_close = self.get_close()
         can_calc_count = rows - x + 1
         # range 函数不包含stop，可以理解为从0开始循环can_calc_count次
         for i in reversed(range(can_calc_count)):
@@ -54,7 +54,7 @@ class Macd:
             raise ValueError(f"计算过去 {x} 天EMA失败，数据仅包含 {rows} 行，不足以计算EMA")
 
         series_ema_x = pd.Series()
-        k_data_close = self.get_close_func(self.k_data)
+        k_data_close = self.get_close()
         can_calc_count = rows - x
         # 使用ma作为ema的初始值
         ema_prev = Macd(k_data=self.k_data[can_calc_count:can_calc_count + x].reset_index(drop=True),
