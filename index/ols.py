@@ -121,18 +121,18 @@ class Ols(IndexCommon):
         # 显示图形
         plt.show()
 
-    def upward_fitting(self, start_step=7, start=0, jump_step=3):
+    def upward_fitting(self, start_step=7, start=0, jump_step=3, break_slope=0.005):
         slope_cache = []
         step = start_step
         start, end = self._init_range(start, step)
         x, y, slope, intercept, r_value, p_value, std_err = self._ols_calc(start, end)
-        slope_cache.append({f'{start}_{end}': slope})
-        if slope < 0:
-            print("个股近期处于下降趋势：")
+        slope_cache.append({f'slope': slope, 'start': start, 'step': step, 'end': end})
+        if slope < break_slope:
+            print("个股近期处于或即将进入下降趋势：")
             print(slope_cache[-1])
             return slope_cache[-1]
 
-        while slope > 0:
+        while slope > break_slope:
             step += 1
             try:
                 start, end = self._init_range(start, step)
@@ -141,7 +141,7 @@ class Ols(IndexCommon):
                 print("拟合结束，可供拟合数据均处于上升趋势")
                 break
             x, y, slope, intercept, r_value, p_value, std_err = self._ols_calc(start, end)
-            slope_cache.append({f'{start}_{end}': slope, 'start': start, 'step': step, 'end': end})
+            slope_cache.append({f'slope': slope, 'start': start, 'step': step, 'end': end})
         last = slope_cache[-1]
         print(last)
         return last
