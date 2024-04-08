@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 from sql_helper.bao_stock_helper import BaoStockHelper
 from index.macd import Macd
 
-code = "sh.601127"
+code = "sh.603993"
 bsh = BaoStockHelper().conn()
-stock_data_df = bsh.get_stock_date_in_date_range_as_df(code=code, start_date="2023-01-01", day="2024-04-03")
+stock_data_df = bsh.get_stock_date_in_date_range_as_df(code=code, start_date="2022-10-01", day="2024-04-03")
 stock_macd = Macd(k_data=stock_data_df)
 dif_s_l = np.array([])
 try:

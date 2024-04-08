@@ -123,10 +123,17 @@ class BaoStockHelper:
     def get_all_stock_with_date(self, date=None) -> pd.DataFrame:
         date = date if date is not None else datetime.now().strftime("%Y-%m-%d")
         get_all_with_day_sql = f"""
-            select * from bs_stock_data_day_k where date = '{date}'
+            select * from bs_stock_data_day_k where date = '{date}';
         """
         data = self._execute_query_sql(get_all_with_day_sql)
         return pd.DataFrame(data)
+
+    def get_base_stock_date(self, code) -> dict:
+        get_base_stock_date_sql = f"""
+            select * from bs_stock_base_data where code = "{code}";
+        """
+        data = self._execute_query_sql(get_base_stock_date_sql)
+        return {} if len(data) == 0 else data[0]
 
     # 过去 x 天累积涨幅超过指定数值是的股票并按行业分类
     def group_by_industry_and_ge_percent(self, last_x_day: int, least_percent: decimal) \
