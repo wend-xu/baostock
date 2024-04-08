@@ -29,14 +29,24 @@ def pd_task_slicing_mean(data: pd.DataFrame, task_count=20) -> dict[int, pd.Data
     return result
 
 
+def log_err(messsage: str):
+    with open('error.txt', 'w', encoding='utf-8') as file:
+        # 写入一些文本
+        file.write(f'{messsage} \n\n')
+
+
 def multi_process_execute_target(index, pickle_dump, target: Callable[[pd.DataFrame], None]):
-    print(f"进程{index} 开始执行")
-    if pickle_dump is not None:
-        data_df = pickle.loads(pickle_dump)
-        target(data_df)
-        print(f"进程 {index} 执行完成")
-    else:
-        print(f"进程 {index} 数据为空")
+    try:
+        print(f"进程{index} 开始执行")
+        if pickle_dump is not None:
+            data_df = pickle.loads(pickle_dump)
+            target(data_df)
+            print(f"进程 {index} 执行完成")
+        else:
+            print(f"进程 {index} 数据为空")
+    except Exception as ex:
+        load_err(f"进程{index} 出现异常：\n {str(ex)}")
+
 
 
 def multi_process_execute(data: pd.DataFrame, target: Callable[[pd.DataFrame], None], max_process_count=None):
