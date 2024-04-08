@@ -6,7 +6,7 @@ from index.macd import Macd
 from index.ols import Ols
 from sql_helper.bao_stock_helper import BaoStockHelper
 
-start_time= datetime.now()
+start_time = datetime.now()
 bsh = BaoStockHelper().conn()
 all_in_date = bsh.get_all_stock_with_date("2024-04-03")
 result_array = []
@@ -25,7 +25,7 @@ for code in all_code:
     while slope >= 0:
         try:
             ols.ols(start=start, interval=interval)
-            slope = stock_df[f'slope_{interval}'].dropna().iloc[-1]
+            slope = stock_df[ols.get_key_slope(interval=interval)].dropna().iloc[-1]
             start += 1
         except Exception as ex:
             print(str(ex))

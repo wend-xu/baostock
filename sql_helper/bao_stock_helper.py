@@ -123,7 +123,7 @@ class BaoStockHelper:
     def get_all_stock_with_date(self, date=None) -> pd.DataFrame:
         date = date if date is not None else datetime.now().strftime("%Y-%m-%d")
         get_all_with_day_sql = f"""
-            select * from bs_stock_data_day_k where date = '{date}';
+            select * from bs_stock_data_day_k where date = '{date}' limit 100;
         """
         data = self._execute_query_sql(get_all_with_day_sql)
         return pd.DataFrame(data)
