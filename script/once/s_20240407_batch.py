@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 import pandas as pd
 
@@ -6,6 +6,7 @@ from index.macd import Macd
 from index.ols import Ols
 from sql_helper.bao_stock_helper import BaoStockHelper
 
+start_time= datetime.now()
 bsh = BaoStockHelper().conn()
 all_in_date = bsh.get_all_stock_with_date("2024-04-03")
 result_array = []
@@ -42,3 +43,5 @@ for code in all_code:
     result = {'code': code, 'upperDurationDaysWork': start + interval, **base_stock_data}
     result_array.append(result)
 pd.DataFrame(result_array).to_csv("ols_rolling_window_fitting_2024-04-03.csv")
+end_time = datetime.now()
+print(f"耗时：{end_time - start_time}")
