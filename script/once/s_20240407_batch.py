@@ -5,6 +5,7 @@ import pandas as pd
 from index.macd import Macd
 from index.ols import Ols
 from sql_helper.bao_stock_helper import BaoStockHelper
+from util.worker_util import log_err
 
 start_time = datetime.now()
 bsh = BaoStockHelper().conn()
@@ -16,6 +17,7 @@ for code in all_code:
     base_stock_data = bsh.get_base_stock_date(code)
     if base_stock_data.get('ipoDate') is None or base_stock_data['ipoDate'] > ipoDateMax:
         print("忽略2023年后上市个股")
+        print(f"{code} 的上市时间为 [{base_stock_data.get('ipoDate')}],忽略")
         continue
     stock_df = bsh.get_stock_date_in_date_range_as_df(code=code, start_date="2020-01-01", day="2024-04-03")
     macd = Macd(k_data=stock_df)

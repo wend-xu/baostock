@@ -29,10 +29,10 @@ def pd_task_slicing_mean(data: pd.DataFrame, task_count=20) -> dict[int, pd.Data
     return result
 
 
-def log_err(messsage: str):
+def log_err(message: str):
     with open('error.txt', 'w', encoding='utf-8') as file:
         # 写入一些文本
-        file.write(f'{messsage} \n\n')
+        file.write(f'{datetime.now()} - {message} \n')
 
 
 def multi_process_execute_target(index, pickle_dump, target: Callable[[pd.DataFrame], None]):
@@ -45,12 +45,13 @@ def multi_process_execute_target(index, pickle_dump, target: Callable[[pd.DataFr
         else:
             print(f"进程 {index} 数据为空")
     except Exception as ex:
-        load_err(f"进程{index} 出现异常：\n {str(ex)}")
+        log_err(f"进程{index} 出现异常：\n {str(ex)}")
 
 
 
 def multi_process_execute(data: pd.DataFrame, target: Callable[[pd.DataFrame], None], max_process_count=None):
     start = datetime.now()
+    multiprocessing.set_start_method('spawn')
     max_process_count = os.cpu_count() if max_process_count is None else max_process_count
     print(f"开始执行任务:{start} ,最大进程数:{max_process_count}")
     slicing_result = pd_task_slicing_mean(data=data, task_count=max_process_count)
