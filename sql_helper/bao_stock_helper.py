@@ -120,10 +120,11 @@ class BaoStockHelper:
         return self._execute_query_sql(get_last_x_day_percent_sql)
 
     # 获取指定日期的所有股票k线数据
-    def get_all_stock_with_date(self, date=None) -> pd.DataFrame:
+    def get_all_stock_with_date(self, date=None, limit=None) -> pd.DataFrame:
         date = date if date is not None else datetime.now().strftime("%Y-%m-%d")
+        limit_sql = "" if limit is None else f" limit {limit}"
         get_all_with_day_sql = f"""
-            select * from bs_stock_data_day_k where date = '{date}' ;
+            select * from bs_stock_data_day_k where date = '{date}' {limit_sql} ;
         """
         data = self._execute_query_sql(get_all_with_day_sql)
         return pd.DataFrame(data)
@@ -262,3 +263,35 @@ class BaoStockHelper:
         """
         self._execute_delete_sql(sql=clear_k_data_temp_sql, commit=True)
         return self
+
+    @staticmethod
+    def analyse_pct_chg(data: pd.DataFrame, start=0, interval=14):
+        data_section = data.iloc[start:(start + interval)]
+        pct_chg_series = data_section["pctChg"].apply(lambda x: float(x))
+        date_series = data_section["date"]
+        pct_chg_max = pct_chg_series.max()
+        pct_chg_min = pct_chg_series.min()
+        pct_chg_latest = pct_chg_series.iloc[0]
+        pct_chg_sum_3_day = pct_chg_series.iloc[0:3].sum() if interval > 3 else None
+        pct_chg_sum_7_day = pct_chg_series.iloc[0:7].sum() if interval > 7 else None
+        pct_chg_sum = pct_chg_series.sum()
+        pct_chg_var = pct_chg_series.var()
+        pct_chg_mean = pct_chg_series.mean()
+        close_latest = data['close'].iloc[0]
+        close_start = data['close'].iloc[-1]
+        start_date = date_series.iloc[-1]
+        end_date = date_series.iloc[0]
+        return {
+            'pct_chg_max': pct_chg_max,
+            'pct_chg_min': pct_chg_min,
+            'pct_chg_latest': pct_chg_latest,
+            'pct_chg_sum_3_day': pct_chg_sum_3_day,
+            'pct_chg_sum_7_day': pct_chg_sum_7_day,
+            'pct_chg_sum_range': pct_chg_sum,
+            'pct_chg_var': pct_chg_var,
+            'pct_chg_mean': pct_chg_mean,
+            'close_latest': close_latest,
+            'close_start': close_start,
+            'start_date': start_date,
+            'end_date': end_date
+        }

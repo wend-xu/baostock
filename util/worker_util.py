@@ -35,12 +35,16 @@ def log_err(message: str):
         file.write(f'{datetime.now()} - {message} \n')
 
 
-def multi_process_execute_target(index, pickle_dump, target: Callable[[pd.DataFrame], None]):
+def multi_process_execute_target(index, pickle_dump, target: Callable[[int, pd.DataFrame, tuple, dict], None],
+                                 dump_args,
+                                 dump_kwargs):
     try:
         print(f"进程{index} 开始执行")
         if pickle_dump is not None:
             data_df = pickle.loads(pickle_dump)
-            target(data_df)
+            args = pickle.loads(dump_args)
+            kwargs = pickle.loads(dump_kwargs)
+            target(index, data_df, *args, **kwargs)
             print(f"进程 {index} 执行完成")
         else:
             print(f"进程 {index} 数据为空")
@@ -48,8 +52,9 @@ def multi_process_execute_target(index, pickle_dump, target: Callable[[pd.DataFr
         log_err(f"进程{index} 出现异常：\n {str(ex)}")
 
 
-
-def multi_process_execute(data: pd.DataFrame, target: Callable[[pd.DataFrame], None], max_process_count=None):
+def multi_process_execute(data: pd.DataFrame, target: Callable[[int, pd.DataFrame, tuple, dict], None],
+                          max_process_count=None, *args,
+                          **kwargs):
     start = datetime.now()
     multiprocessing.set_start_method('spawn')
     max_process_count = os.cpu_count() if max_process_count is None else max_process_count
@@ -59,10 +64,13 @@ def multi_process_execute(data: pd.DataFrame, target: Callable[[pd.DataFrame], N
     for index in slicing_result:
         data = slicing_result[index]
         print(f"准备启动进程 {index} ,当前进程分配任务数: {data.shape[0]}")
-        dump = pickle.dumps(data)
-        process = multiprocessing.Process(target=multi_process_execute_target, args=(index, dump, target))
+        dump_data = pickle.dumps(data)
+        dump_args = pickle.dumps(args)
+        dump_kwargs = pickle.dumps(kwargs)
+        process = multiprocessing.Process(target=multi_process_execute_target,
+                                          args=(index, dump_data, target, dump_args, dump_kwargs))
         process.start()
-        print(f"线程启动完成")
+        print(f"进程启动完成")
         process_array.append(process)
 
     for process in process_array:

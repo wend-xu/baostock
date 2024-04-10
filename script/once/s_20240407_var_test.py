@@ -1,6 +1,13 @@
-import pandas as pd
-from sqlalchemy import create_engine
+def func_with_both_1(*args, **kwargs):
+    print("Positional arguments:")
+    for arg in args:
+        print(arg)
+    print("Keyword arguments:")
+    for key, value in kwargs.items():
+        print(f"{key} = {value}")
 
-df = pd.read_csv('ols_rolling_window_fitting.csv', sep=',')
-engine = create_engine("mysql+mysqlconnector://root:qqaazz321@127.0.0.1/stock")
-df.to_sql('analyse_report_temp', engine, if_exists='append', index=False)
+
+def func_with_both_2(*args, **kwargs):
+    func_with_both_1(*args, **kwargs)
+
+func_with_both_2(1, 2, 3, a=4, b=5)
