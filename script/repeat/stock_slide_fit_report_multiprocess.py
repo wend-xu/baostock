@@ -29,7 +29,7 @@ def handle_one(bsh: BaoStockHelper, code: str, ipo_date_max: date, fit_start_dat
     ols = Ols(data=stock_df, ols_data_key=macd.get_dif_s_l_key())
     slide_fit_result = ols.slide_fit(slide_interval=7, start=0)
     pct_chg_analyse = bsh.analyse_pct_chg(data=stock_df, start=slide_fit_result['start'],
-                                          interval=slide_fit_result['slide_interval'])
+                                          interval=slide_fit_result['fit_range_interval'])
     slide_fit_result = {**base_stock_data, **pct_chg_analyse, **slide_fit_result}
     print(slide_fit_result)
     return slide_fit_result
