@@ -70,12 +70,12 @@ def handle_section(index: int, stock_df_section: pd.DataFrame, *args, **kwargs):
 
 
 def stock_slide_fit_report_multiprocess(fit_start_date: str = None):
-    if __name__ == '__main__':
-        fit_start_date = datetime.now().strftime("%Y-%m-%d") if fit_start_date is None else fit_start_date
-        bsh = BaoStockHelper().conn()
-        all_in_date = bsh.get_all_stock_with_date(fit_start_date,limit=100)
-        multi_process_execute(data=all_in_date, target=handle_section, start_date=fit_start_date)
-        bsh.dis_conn()
+    fit_start_date = datetime.now().strftime("%Y-%m-%d") if fit_start_date is None else fit_start_date
+    bsh = BaoStockHelper().conn()
+    all_in_date = bsh.get_all_stock_with_date(fit_start_date)
+    multi_process_execute(data=all_in_date, target=handle_section, start_date=fit_start_date)
+    bsh.dis_conn()
 
 
-stock_slide_fit_report_multiprocess(fit_start_date="2024-04-03")
+if __name__ == '__main__':
+    stock_slide_fit_report_multiprocess(fit_start_date="2024-04-03")
