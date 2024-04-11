@@ -6,10 +6,12 @@ from sqlalchemy import create_engine
 from index.macd import Macd
 from index.ols import Ols
 from sql_helper.bao_stock_helper import BaoStockHelper
+from sql_helper.xq_stock_helper import XqStockHelper
 from util.worker_util import multi_process_execute, log_err
 
 
-def handle_one(bsh: BaoStockHelper, code: str, ipo_date_max: date, fit_start_date: str, fit_oldest_date="2020-01-01"):
+def handle_one(bsh: BaoStockHelper, xqh: XqStockHelper, code: str, ipo_date_max: date, fit_start_date: str,
+               fit_oldest_date="2020-01-01"):
     # io瓶颈，可以通过将数据丢到redis，减少数据库查询操作
     # 在单进程执行完成大约需要20分钟，纯粹的数据库读操作大概一分半
     # 在多进程执行时，2分钟可以完成全部，数据库操作可以进一步优化执行速度
@@ -30,7 +32,10 @@ def handle_one(bsh: BaoStockHelper, code: str, ipo_date_max: date, fit_start_dat
     slide_fit_result = ols.slide_fit(slide_interval=7, start=0)
     pct_chg_analyse = bsh.analyse_pct_chg(data=stock_df, start=slide_fit_result['start'],
                                           interval=slide_fit_result['fit_range_interval'])
-    slide_fit_result = {**base_stock_data, **pct_chg_analyse, **slide_fit_result}
+    xq_analyse = xqh.analyse_stock_in_interval(symbol=XqStockHelper.bs_code_2_xq_symbol(code),
+                                               start_date=fit_start_date,
+                                               interval=slide_fit_result['fit_range_interval'])
+    slide_fit_result = {**base_stock_data, **pct_chg_analyse, **slide_fit_result, **xq_analyse}
     print(slide_fit_result)
     return slide_fit_result
 
@@ -46,11 +51,13 @@ def handle_section(index: int, stock_df_section: pd.DataFrame, *args, **kwargs):
         f"当前进程：{index} 开始执行拟合切片，切片任务数: {stock_df_section.shape[0]} ,拟合数据起止点 {fit_oldest_date} - {fit_start_date} ,结果存储表名： {table_name}")
 
     bsh_in_section = BaoStockHelper().conn()
+    xqh_in_section = XqStockHelper().conn()
     ipo_date_max = date(2023, 1, 1)
     result_array = []
     for code in stock_df_section['code']:
         try:
-            slide_fit_result = handle_one(bsh_in_section, code, ipo_date_max, fit_start_date=fit_start_date,
+            slide_fit_result = handle_one(bsh_in_section, xqh_in_section, code, ipo_date_max,
+                                          fit_start_date=fit_start_date,
                                           fit_oldest_date=fit_oldest_date)
             if slide_fit_result is not None:
                 result_array.append(slide_fit_result)
@@ -59,13 +66,14 @@ def handle_section(index: int, stock_df_section: pd.DataFrame, *args, **kwargs):
     engine = create_engine("mysql+mysqlconnector://root:qqaazz321@127.0.0.1/stock")
     pd.DataFrame(result_array).to_sql(table_name, engine, if_exists='append', index=False)
     bsh_in_section.dis_conn()
+    xqh_in_section.dis_conn()
 
 
 def stock_slide_fit_report_multiprocess(fit_start_date: str = None):
     if __name__ == '__main__':
         fit_start_date = datetime.now().strftime("%Y-%m-%d") if fit_start_date is None else fit_start_date
         bsh = BaoStockHelper().conn()
-        all_in_date = bsh.get_all_stock_with_date(fit_start_date)
+        all_in_date = bsh.get_all_stock_with_date(fit_start_date,limit=100)
         multi_process_execute(data=all_in_date, target=handle_section, start_date=fit_start_date)
         bsh.dis_conn()
 
