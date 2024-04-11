@@ -17,7 +17,7 @@ def handle_one(bsh: BaoStockHelper, code: str, ipo_date_max: date, fit_start_dat
     # todo 这里的忽略条件应该调整为动态的，根据 fit_start_date 和 slide_interval 计算出一次拟合需要的最少数据
     # 理论上macd的 长周期、短周期、eda均线周期、滑动拟合周期都应该支持传入
     if base_stock_data.get('ipoDate') is None or base_stock_data['ipoDate'] > ipo_date_max:
-        print("忽略2023年后上市个股")
+        print(f"忽略{ipo_date_max}后上市个股")
         log_err(f"{code} 的上市时间为 [{base_stock_data.get('ipoDate')}],忽略")
         return None
     stock_df = bsh.get_stock_date_in_date_range_as_df(code=code, start_date=fit_oldest_date,
