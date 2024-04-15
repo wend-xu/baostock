@@ -236,17 +236,17 @@ class BaoStockHelper:
     # 将传入数据写入k线表
     def copy_data_to_bs_stock_data_k_from_temp(self, all_temp_k_info):
         for one_temp_k_info in all_temp_k_info:
-            insert = dict_to_mysql_insert(table_name="bs_stock_data_day_k", data_dict=one_temp_k_info,
-                                          need_camel_to_snake=False)
+            insert, values = dict_to_mysql_insert(table_name="bs_stock_data_day_k", data_dict=one_temp_k_info,
+                                                  need_camel_to_snake=False)
             # print(insert)
             # 创建一个新的列表，用于存储转换后的值
-            values = []
+            # values = []
             # 遍历字典的值，并将空字符串转换为None
-            for value in one_temp_k_info.values():
-                if value == '':
-                    values.append(None)  # 空字符串转换为None
-                else:
-                    values.append(value)  # 其他值保持不变
+            # for value in one_temp_k_info.values():
+            #     if value == '':
+            #         values.append(None)  # 空字符串转换为None
+            #     else:
+            #         values.append(value)  # 其他值保持不变
             self._execute_insert_sql(insert, values)
         return self
 

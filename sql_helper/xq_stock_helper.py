@@ -1,16 +1,20 @@
+import time
 from datetime import datetime
 from decimal import Decimal
 from typing import Union, List, Dict
 
 import mysql
 import pandas as pd
+import requests
 from mysql.connector.abstracts import MySQLCursorAbstract, MySQLConnectionAbstract
 from mysql.connector.pooling import PooledMySQLConnection
 
 import numpy as np
+from sqlalchemy import create_engine
 
 from entity.xq_stock_data_day import XqStockDataDay
 from sql_helper.common_helper import CommonHelper
+from sql_helper.insert_sql_helper import dict_to_mysql_insert
 
 
 class XqStockHelper(CommonHelper):
@@ -31,6 +35,23 @@ class XqStockHelper(CommonHelper):
         self.cursor.close()
         self.connection.close()
         return self
+
+    def _execute_insert_sql(self, sql, values, commit=False):
+        print(f"开始执行sql插入语句: \n {sql}")
+        self.cursor.execute(sql, values)
+        if commit:
+            self.connection.commit()
+
+    def _execute_query_sql(self, sql):
+        print(f"开始执行sql查询语句: \n {sql}")
+        self.cursor.execute(sql)
+        return self.cursor.fetchall()
+
+    def _execute_delete_sql(self, sql, commit=False):
+        print(f"即将执行sql删除语句: \n {sql}")
+        self.cursor.execute(sql)
+        if commit:
+            self.connection.commit()
 
     # 获取过去X天的股票数据
     def get_stock_last_x_day(self, symbol: str, last_x_day=7) -> List[XqStockDataDay]:
@@ -234,3 +255,88 @@ class XqStockHelper(CommonHelper):
             'limitup_days': latest.get('limitup_days'),
             'xq_followers': latest.get('followers')
         }
+
+    def sync_from_xq_to_temp(self, cookie: str, page_total=57, date: str = None):
+        date = datetime.now().strftime("%Y-%m-%d") if date is None else date
+        headers = {
+            "Cookie": cookie,
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": "zh-CN,zh;q=0.9",
+            "Cache-Control": "no-cache",
+            "Origin": "https://xueqiu.com",
+            "Pragma": "no-cache",
+            "Referer": "https://xueqiu.com/",
+            "Sec-Ch-Ua": "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": "\"macOS\"",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-site",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+        }
+        engine = create_engine("mysql+mysqlconnector://root:qqaazz321@127.0.0.1/stock")
+        for page in range(page_total):
+            time.sleep(1)
+            url = f"https://stock.xueqiu.com/v5/stock/screener/quote/list.json?page={page}&size=90&order=asc&order_by=symbol&market=CN&type=sh_sz"
+            print(f"请求地址：{url}")
+            resp = requests.get(url=url, headers=headers)
+            try:
+                data = resp.json()
+                data_list = data["data"]["list"]
+                if len(data_list) == 0:
+                    print(f"页码[{page}]数据为空，执行结束 ")
+                    break
+                data_df = pd.DataFrame(data_list)
+                data_df['date'] = pd.Series([date] * data_df.shape[0])
+                print(f"请求到数据条数： {data_df.shape[0]}")
+                duplicate_rows = data_df[data_df.duplicated(subset='symbol', keep='first')]
+                if duplicate_rows.shape[0] > 0:
+                    print(f"存在重复的行： {duplicate_rows.shape[0]}")
+                    for index, row in duplicate_rows.iterrows():
+                        print(row)
+                    data_df = data_df.drop_duplicates(subset="symbol")
+                    print(f"重复行打印完成，去重完成，去重后条数： {data_df.shape[0]}")
+                data_df.to_sql("xq_stock_data_day_temp", engine, if_exists='append', index=False)
+                print(f"同步【{page}】完成")
+            except Exception as ex:
+                print(f"同步到【{page}】出现异常:{str(ex)}")
+                raise ex
+        return self
+
+    def cp_from_temp(self, date: str = None):
+        date = datetime.now().strftime("%Y-%m-%d") if date is None else date
+        sql = f"""
+           select * from xq_stock_data_day_temp where date = '{date}'
+        """
+        exclude_fields = ['mapping_quote_current', 'dual_counter_mapping_symbol']
+        select_result = self._execute_query_sql(sql)
+        print(f"查询到数据{len(select_result)}条")
+        for result_one in select_result:
+            check_sql = f"""
+                SELECT  * from xq_stock_data_day 
+                    where symbol  = "{result_one.get("symbol")}" and `date` = "{result_one.get("date")}";
+            """
+            check = len(self._execute_query_sql(check_sql)) > 0
+            if check:
+                delete_sql = f"""
+                    delete from xq_stock_data_day
+                        where symbol  = "{result_one.get("symbol")}" and `date` = "{result_one.get("date")}";
+                """
+                self._execute_delete_sql(delete_sql, commit=True)
+            insert, values = dict_to_mysql_insert(table_name="xq_stock_data_day", data_dict=result_one,
+                                                  exclude_fields=exclude_fields)
+            self._execute_insert_sql(sql=insert, values=values)
+        self.connection.commit()
+        return self
+
+    def clear_temp(self):
+        clear_sql = """
+        DELETE  from xq_stock_data_day_temp ;
+        """
+        self._execute_delete_sql(clear_sql, commit=True)
+
+
+if __name__ == '__main__':
+    cookie_set = ""
+    XqStockHelper().conn().sync_from_xq_to_temp(cookie=cookie_set).cp_from_temp()

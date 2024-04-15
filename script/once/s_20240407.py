@@ -3,7 +3,7 @@ from index.ols import Ols
 from sql_helper.bao_stock_helper import BaoStockHelper
 
 # code = "sz.300037"
-code = "sz.002444"
+code = "sz.000002"
 bsh = BaoStockHelper().conn()
 stock_df = bsh.get_stock_date_in_date_range_as_df(code=code, start_date="2020-01-01", day="2024-04-03")
 macd = Macd(k_data=stock_df)
