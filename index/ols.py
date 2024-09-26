@@ -38,14 +38,20 @@ class Ols(IndexCommon):
         self.ols_data_key = ols_data_key
         self.gen_record_cache = []
 
-    def x_index_key(self):
+    def get_key_x_index(self):
         return f"x_index_{self.ols_data_key}"
 
-    def y_index_key(self):
+    def get_key_y_index(self):
         return f"y_index_{self.ols_data_key}"
 
+    def get_key_slope(self, interval) -> str:
+        return f"slope_{interval}"
+
+    def get_key_intercept(self, interval) -> str:
+        return f"interval_{interval}"
+
     def get_x_index(self):
-        key = self.x_index_key()
+        key = self.get_key_x_index()
         x_index = self.data.get(key)
         if x_index is None:
             x_index = self.get_x_func(self.data, self.ols_data_key)
@@ -55,7 +61,7 @@ class Ols(IndexCommon):
     def get_y_index(self):
         return self.get_y_func(self.data, self.ols_data_key)
 
-    def _init_range(self, start: int, interval: int):
+    def _range_init(self, start: int, interval: int):
         start = start
         end = start + interval
         x_index = self.get_x_index()
@@ -63,6 +69,12 @@ class Ols(IndexCommon):
         if end > x_index_len:
             raise ValueError(f"可获取的 x 轴坐标最大数量 {x_index_len} ,需要的最大数量 {end},超出允许的范围")
         return start, end
+
+    # 当超过最大范围时，返回最大值
+    def _interval_max_if_out_of_edge(self, start: int, interval: int):
+        end = start + interval
+        x_index_len = len(self.get_x_index().dropna())
+        return interval if end <= x_index_len else (x_index_len - start)
 
     def _cut_data(self, start: int, end: int):
         x_index_cut_array = np.array(self.get_x_index().iloc[start:end].iloc[::-1])
@@ -74,7 +86,7 @@ class Ols(IndexCommon):
         return x, y, *stats.linregress(x=x, y=y)
 
     def ols(self, start=0, interval=7):
-        start, end = self._init_range(interval=interval, start=start)
+        start, end = self._range_init(interval=interval, start=start)
         x, y, slope, intercept, r_value, p_value, std_err = self._ols_calc(start, end)
         self.set_ols_to_data(slope=slope, intercept=intercept, start=start, end=end, interval=interval,
                              fit_data=np.flip((slope * x + intercept)))
@@ -83,8 +95,8 @@ class Ols(IndexCommon):
     # 相同长度的每一个不同区间，其皆为相交或不交的关系，不会有相等的情况，
     # 即相同长度的不同区间的斜率等数据可以存储于同一列，其下标极为区间的第一个index
     def set_ols_to_data(self, slope, intercept, start, end, interval, fit_data):
-        slope_key = f'slope_{interval}'
-        intercept_key = f' intercept_{interval}'
+        slope_key = self.get_key_slope(interval)
+        intercept_key = self.get_key_intercept(interval)
         self.__cache_generate_record(start, end, interval)
         self.pd_df_set_to_column_batch(df=self.data, key=self.ols_result_key(start, end), index_start=start,
                                        index_end=end, value=fit_data)
@@ -121,27 +133,55 @@ class Ols(IndexCommon):
         # 显示图形
         plt.show()
 
-    def upward_fitting(self, start_step=7, start=0, jump_step=3):
+    def upward_fitting(self, start_step=7, start=0, jump_step=3, break_slope=0.005):
         slope_cache = []
         step = start_step
-        start, end = self._init_range(start, step)
+        start, end = self._range_init(start, step)
         x, y, slope, intercept, r_value, p_value, std_err = self._ols_calc(start, end)
-        slope_cache.append({f'{start}_{end}': slope})
-        if slope < 0:
-            print("个股近期处于下降趋势：")
+        slope_cache.append({f'slope': slope, 'start': start, 'step': step, 'end': end})
+        if slope < break_slope:
+            print("个股近期处于或即将进入下降趋势：")
             print(slope_cache[-1])
             return slope_cache[-1]
 
-        while slope > 0:
+        while slope > break_slope:
             step += 1
             try:
-                start, end = self._init_range(start, step)
+                start, end = self._range_init(start, step)
             except Exception as ex:
                 print(str(ex))
                 print("拟合结束，可供拟合数据均处于上升趋势")
                 break
             x, y, slope, intercept, r_value, p_value, std_err = self._ols_calc(start, end)
-            slope_cache.append({f'{start}_{end}': slope, 'start': start, 'step': step, 'end': end})
+            slope_cache.append({f'slope': slope, 'start': start, 'step': step, 'end': end})
         last = slope_cache[-1]
         print(last)
         return last
+
+    # 默认获取最后一个 slope
+    def get_slope(self, interval=7, slope_index=-1):
+        return self.data[self.get_key_slope(interval)].dropna().iloc[slope_index]
+
+    def slide_fit(self, slide_interval=7, start=0, stop_condition=lambda slope_fit: slope_fit < 0):
+        # 在滑动窗口给定的范围持续执行拟合，直到数据不符合条件
+        slide_start, fit_count, slide_slope = start, 0, 0
+        while fit_count == 0 or not stop_condition(slide_slope):
+            fit_count += 1
+            try:
+                self.ols(start=slide_start, interval=slide_interval)
+            except Exception as ex:
+                print(f"拟合结束，拟合区间数据未达成拟合终止条件,终止消息:{str(ex)}")
+                slide_start -= 1
+                break
+            slide_slope = self.get_slope(interval=slide_interval, slope_index=slide_start)
+            slide_start += 1
+        fit_range_interval = slide_start + slide_interval - start
+        self.ols(start=start, interval=fit_range_interval)
+        fit_range_slope = self.get_slope(interval=fit_range_interval, slope_index=start)
+
+        fit_range_expand_interval = self._interval_max_if_out_of_edge(start=start, interval=fit_range_interval * 2)
+        self.ols(start=start, interval=fit_range_expand_interval)
+        fit_expand_range_slope = self.get_slope(interval=fit_range_expand_interval, slope_index=start)
+        return {"start": start, "slide_interval": slide_interval, "fit_range_interval": fit_range_interval,
+                "fit_range_slope": fit_range_slope, "fit_range_expand_interval": fit_range_expand_interval,
+                "fit_expand_range_slope": fit_expand_range_slope}

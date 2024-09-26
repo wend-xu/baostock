@@ -77,12 +77,16 @@ class Macd:
     def dif_s_l(self, sort_term: int = 12, long_term: int = 26):
         ema_sort_term = self.get_ema_x(sort_term)
         ema_long_term = self.get_ema_x(long_term)
-        self.k_data[f'dif_{sort_term}_{long_term}'] = (ema_sort_term - ema_long_term)
+        self.k_data[self.get_dif_s_l_key(sort_term=sort_term, long_term=long_term)] = (ema_sort_term - ema_long_term)
         return self
 
-    # 计算长周期指数平均线和短周期指数平均的差，即趋势
+    def get_dif_s_l_key(self, sort_term: int = 12, long_term: int = 26):
+        return f'dif_{sort_term}_{long_term}'
+
+        # 计算长周期指数平均线和短周期指数平均的差，即趋势
+
     def get_dif_s_l(self, sort_term: int = 12, long_term: int = 26):
-        key = f'dif_{sort_term}_{long_term}'
+        key = self.get_dif_s_l_key(sort_term=sort_term, long_term=long_term)
         dif_s_l = self.k_data.get(key)
         if dif_s_l is None:
             self.dif_s_l(sort_term=sort_term, long_term=long_term)
