@@ -338,5 +338,5 @@ class XqStockHelper(CommonHelper):
 
 
 if __name__ == '__main__':
-    cookie_set = ""
+    cookie_set = "cookiesu=691695707489519; device_id=6be7ca1aa9d633b1e74b64976d472e92; s=bd15mww19j; xq_is_login=1; u=8314239596; bid=982332aceec609279e9a0c91d859af19_lo28xwo3; xq_a_token=e7f644e4751d9b64f1042a15bd6d72b82e44b2f2; xqat=e7f644e4751d9b64f1042a15bd6d72b82e44b2f2; xq_id_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJ1aWQiOjgzMTQyMzk1OTYsImlzcyI6InVjIiwiZXhwIjoxNzE0Nzk5NjQ1LCJjdG0iOjE3MTIyMDc2NDU2MTUsImNpZCI6ImQ5ZDBuNEFadXAifQ.QLCrBrz0CtG2fdGQdJGd-_hGY6-jYoDsSZsuQBaSeVeVpJdRcR8cF0FvznzTIqSzDUOMRQe7JXTd8oR3V-LQ1dKcmKJWvnOYWhsblLFYD74YSeciT-XaXQBUFTHexAPEPH0o2YScinXjnnBdfPu1zst0JfVQSuikK6CHdsEHFqC7JGl5MKv4aLBOaj4XutjTJWGG1q-V_AI7ckhVWExoro1eNU0veN_gt0iUWKb2K6umhde_l7nl5AN-gr6vxoTLPOt6IDz3nqCtzoEHu9hnHqjONgY7F_ZTlCDdEtZe65Rn8z6uxpnsl9qT_2mUwjGxWSHekvMiKMfEWTp3W5zs8Q; xq_r_token=3234bda53466d1cfabc01c6a3300bb9cbd290231; is_overseas=0; Hm_lvt_1db88642e346389874251b5a1eded6e3=1712888394,1712892645,1712912348,1713099368; Hm_lpvt_1db88642e346389874251b5a1eded6e3=1713099378"
     XqStockHelper().conn().sync_from_xq_to_temp(cookie=cookie_set).cp_from_temp()

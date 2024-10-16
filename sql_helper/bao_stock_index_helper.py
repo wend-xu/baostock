@@ -19,9 +19,9 @@ class BaoStockIndexHelper:
     def __init__(self):
         super().__init__()
 
-    def conn(self):
+    def conn(self,host="127.0.0.1", user="root", password="qqaazz321", database="stock"):
         self.connection = mysql.connector.connect(
-            host="127.0.0.1", user="root", password="qqaazz321", database="stock"
+            host=host, user=user, password=password, database=database
         )
         self.cursor = self.connection.cursor(dictionary=True)
         return self
@@ -105,15 +105,8 @@ class BaoStockIndexHelper:
                                                                         day=day)
             print(f"{index_code} 获取到临时数据 {len(temp_data_in_date_range)} 条")
             for temp_data in temp_data_in_date_range:
-                insert = dict_to_mysql_insert(table_name="bs_index_data_day_k", data_dict=temp_data,
+                insert,values = dict_to_mysql_insert(table_name="bs_index_data_day_k", data_dict=temp_data,
                                               need_camel_to_snake=False)
-                values = []
-                # 遍历字典的值，并将空字符串转换为None
-                for value in temp_data.values():
-                    if value == '':
-                        values.append(None)  # 空字符串转换为None
-                    else:
-                        values.append(value)  # 其他值保持不变
                 self._execute_insert_sql(insert, values)
         return self
 

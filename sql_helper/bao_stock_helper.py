@@ -21,9 +21,9 @@ class BaoStockHelper:
     def __init__(self):
         super().__init__()
 
-    def conn(self):
+    def conn(self, host="127.0.0.1", user="root", password="qqaazz321", database="stock"):
         self.connection = mysql.connector.connect(
-            host="127.0.0.1", user="root", password="qqaazz321", database="stock"
+            host=host, user=user, password=password, database=database
         )
         self.cursor = self.connection.cursor(dictionary=True)
 
