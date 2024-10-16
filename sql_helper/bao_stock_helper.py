@@ -60,21 +60,22 @@ class BaoStockHelper:
             self.connection.commit()
 
     # 获取过去 x 天的 k 线数据
-    def get_stock_last_x_day_k(self, code: str, last_x_day: int) -> List[Union[RowType, Dict[str, RowItemType]]]:
-        today_yyyy_mm_dd = datetime.now().strftime("%Y-%m-%d")
+    def get_stock_last_x_day_k(self, code: str, last_x_day: int, last_day: str = None) -> List[Union[RowType, Dict[str, RowItemType]]]:
+        last_day = datetime.now().strftime("%Y-%m-%d") if last_day is None else last_day
         get_last_x_day_sql = """
             select * from bs_stock_data_day_k where code = '{code}' and date <= '{last_date}' order by date desc limit {x_day}
-        """.format(code=code, last_date=today_yyyy_mm_dd, x_day=last_x_day)
+        """.format(code=code, last_date=last_day, x_day=last_x_day)
         return self._execute_query_sql(get_last_x_day_sql)
 
-    def get_stock_last_x_day_k_as_df(self, code: str, last_x_day: int) -> pd.DataFrame:
-        return pd.DataFrame(self.get_stock_last_x_day_k(code=code, last_x_day=last_x_day))
+    def get_stock_last_x_day_k_as_df(self, code: str, last_x_day: int, last_day: str = None) -> pd.DataFrame:
+        last_day = datetime.now().strftime("%Y-%m-%d") if last_day is None else last_day
+        return pd.DataFrame(self.get_stock_last_x_day_k(code=code, last_x_day=last_x_day,last_day=last_day))
 
-    def get_stock_last_x_day_k_temp(self, code: str, last_x_day: int) -> List[Union[RowType, Dict[str, RowItemType]]]:
-        today_yyyy_mm_dd = datetime.now().strftime("%Y-%m-%d")
+    def get_stock_last_x_day_k_temp(self, code: str, last_x_day: int, last_day: str = None) -> List[Union[RowType, Dict[str, RowItemType]]]:
+        last_day = datetime.now().strftime("%Y-%m-%d") if last_day is None else last_day
         get_last_x_day_sql = """ 
                select * from bs_stock_data_k_temp where code = '{code}' and date <= '{last_date}' order by date desc limit {x_day}
-           """.format(code=code, last_date=today_yyyy_mm_dd, x_day=last_x_day)
+           """.format(code=code, last_date=last_day, x_day=last_x_day)
         return self._execute_query_sql(get_last_x_day_sql)
 
     def get_stock_date_range_k_temp(self, code: str, day=None, start_date=None):

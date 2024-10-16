@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics.pairwise import cosine_similarity
@@ -30,6 +32,7 @@ class Related:
         data_df['date'] = pd.to_datetime(data_df['date'])
         data_df['close'] = data_df['close'].apply(float)
         data_df = data_df.set_index('date')
+        data_df.dropna()
         return data_df
 
     def align(self, data_df_1: pd.DataFrame, data_df_2: pd.DataFrame):
@@ -52,9 +55,11 @@ class Related:
         return spearman_corr
 
     # todo 直接在 rele_stock_and_index 返回所要的数据， relePlot 支持多指数比较 ，增加 releReportOne 计算个股和多个指数的比较 增加releReport生成关联性报告
-    def rele_stock_and_index(self, stock_code: str, index_code: str, last_x_day: int = 14):
-        data_df_stock = self.bs.get_stock_last_x_day_k_as_df(code=stock_code, last_x_day=last_x_day)
-        data_df_index = self.bi.get_index_last_x_day_as_df(index_code=index_code, x=last_x_day)
+    def rele_stock_and_index(self, stock_code: str, index_code: str, last_x_day: int = 14, latest_date: str = None):
+        latest_date = datetime.now().strftime("%Y-%m-%d") if latest_date is None else latest_date
+        data_df_stock = self.bs.get_stock_last_x_day_k_as_df(code=stock_code, last_x_day=last_x_day,
+                                                             last_day=latest_date)
+        data_df_index = self.bi.get_index_last_x_day_as_df(index_code=index_code, x=last_x_day, last_day=latest_date)
         index_date = data_df_index['date']
         start_date = index_date[0]
         end_date = index_date[len(index_date) - 1]
@@ -62,13 +67,22 @@ class Related:
                 self.spearmanr(data_df_index, data_df_stock),
                 data_df_stock, data_df_index, index_date, start_date, end_date)
 
-    def rele_stock_and_multi_index(self, stock_code: str, index_code_list: list, last_x_day: int = 14) -> list[dict]:
+    def rele_stock_and_multi_index(self, stock_code: str, index_code_list: list, last_x_day: int = 14,
+                                   latest_date: str = None) -> list[dict]:
+        latest_date = datetime.now().strftime("%Y-%m-%d") if latest_date is None else latest_date
         result_list = []
-        data_df_stock = self.bs.get_stock_last_x_day_k_as_df(code=stock_code, last_x_day=last_x_day)
+        data_df_stock = self.bs.get_stock_last_x_day_k_as_df(code=stock_code, last_x_day=last_x_day,
+                                                             last_day=latest_date)
+        if len(data_df_stock) < last_x_day:
+            print(
+                f"股票[{stock_code}]在[{latest_date}]及之前共[{len(data_df_stock)}]条记录，小于需要的[{last_x_day}],忽略")
+            return []
+
         stock_range_date = data_df_stock['date']
         start_date, end_date = stock_range_date[0], stock_range_date[len(stock_range_date) - 1]
         for index_code in index_code_list:
-            data_df_index = self.bi.get_index_last_x_day_as_df(index_code=index_code, x=last_x_day)
+            data_df_index = self.bi.get_index_last_x_day_as_df(index_code=index_code, x=last_x_day,
+                                                               last_day=latest_date)
             result_list.append({'stock_code': stock_code, 'index_code': index_code,
                                 'pearsonr': self.pearsonr(data_df_index, data_df_stock),
                                 'spearmanr': self.spearmanr(data_df_index, data_df_stock),
@@ -120,9 +134,13 @@ class Related:
         plt.show()
 
     def rele_stock_and_multi_index_as_report(self, stock_code: str, index_code_list: list,
-                                             last_x_day: int = 14) -> dict:
+                                             last_x_day: int = 14, latest_date: str = None) -> dict | None:
+        latest_date = datetime.now().strftime("%Y-%m-%d") if latest_date is None else latest_date
         rele_multi: list[dict] = self.rele_stock_and_multi_index(stock_code=stock_code, index_code_list=index_code_list,
-                                                                 last_x_day=last_x_day)
+                                                                 last_x_day=last_x_day, latest_date=latest_date)
+        if len(rele_multi) == 0:
+            return None
+
         data_df_stock: pd.DataFrame = rele_multi[0]['data_df_stock']
         data_df_stock_close = data_df_stock['close']
         data_df_stock_date = data_df_stock['date']
@@ -160,6 +178,3 @@ class Related:
             # 开始结束的百分比
 
         return report
-
-    def rele_report(self, last_x_day: int = 14):
-        self.bs.get_all_stock_with_date()

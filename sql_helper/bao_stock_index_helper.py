@@ -19,7 +19,7 @@ class BaoStockIndexHelper:
     def __init__(self):
         super().__init__()
 
-    def conn(self,host="127.0.0.1", user="root", password="qqaazz321", database="stock"):
+    def conn(self, host="127.0.0.1", user="root", password="qqaazz321", database="stock"):
         self.connection = mysql.connector.connect(
             host=host, user=user, password=password, database=database
         )
@@ -70,14 +70,16 @@ class BaoStockIndexHelper:
         """
         return self._execute_query_sql(get_index_temp_in_date_range_sql)
 
-    def get_index_last_x_day(self, index_code: str, x: int):
+    def get_index_last_x_day(self, index_code: str, x: int, last_day: str = None):
+        last_day = datetime.now().strftime("%Y-%m-%d") if last_day is None else last_day
         get_index_last_x_day_sql = f"""
-            select * from bs_index_data_day_k where code = '{index_code}'  order by date desc limit {x}; 
+            select * from bs_index_data_day_k where code = '{index_code}' and date <= '{last_day}' order by date desc limit {x}; 
         """
         return self._execute_query_sql(get_index_last_x_day_sql)
 
-    def get_index_last_x_day_as_df(self, index_code: str, x: int):
-        return pd.DataFrame(self.get_index_last_x_day(index_code=index_code, x=x))
+    def get_index_last_x_day_as_df(self, index_code: str, x: int, last_day: str = None):
+        last_day = datetime.now().strftime("%Y-%m-%d") if last_day is None else last_day
+        return pd.DataFrame(self.get_index_last_x_day(index_code=index_code, x=x, last_day=last_day))
 
     def _init_date_range(self, start_date=None, day=None):
         if day is None or day == "":
@@ -105,8 +107,8 @@ class BaoStockIndexHelper:
                                                                         day=day)
             print(f"{index_code} 获取到临时数据 {len(temp_data_in_date_range)} 条")
             for temp_data in temp_data_in_date_range:
-                insert,values = dict_to_mysql_insert(table_name="bs_index_data_day_k", data_dict=temp_data,
-                                              need_camel_to_snake=False)
+                insert, values = dict_to_mysql_insert(table_name="bs_index_data_day_k", data_dict=temp_data,
+                                                      need_camel_to_snake=False)
                 self._execute_insert_sql(insert, values)
         return self
 
